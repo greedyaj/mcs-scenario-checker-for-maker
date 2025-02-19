@@ -1,0 +1,19 @@
+.left-nav {
+  width: 200px;
+  background-color: #333;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+}
+
+.left-nav a {
+  color: #fff;
+  text-decoration: none;
+  padding: 10px 0;
+  border-bottom: 1px solid #444;
+}
+
+.left-nav a:hover {
+  background-color: #444;
+}
