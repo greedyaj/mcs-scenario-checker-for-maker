@@ -1,15 +1,10 @@
 services:
-  cosmosdb-emulator:
-    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-preview
-    container_name: cosmosdb-emulator
+  redis:
+    image: redis:latest
+    container_name: redis-cache
     ports:
-      - "8081:8081"
-      - "1234:1234"
-    environment:
-      AZURE_COSMOS_EMULATOR_PARTITION_COUNT: 1
-      AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE: "true"
-      AZURE_COSMOS_EMULATOR_IP_ADDRESS_OVERRIDE: "127.0.0.1"
-    mem_limit: 3g
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "allkeys-lru"]
 
   mcs-scenario-checker-for-maker:
     build:
@@ -21,4 +16,4 @@ services:
     env_file:
       - .env
     depends_on:
-      - cosmosdb-emulator
+      - redis

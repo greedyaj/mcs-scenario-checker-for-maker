@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { CosmosClient } from '@azure/cosmos';
+import Redis from 'ioredis';
+
+const redis = new Redis({
+  host: 'localhost',
+  port: 6379,
+});
 
 const ExecuteTriggerTests: React.FC = () => {
     const [testResults, setTestResults] = useState<any[]>([]);
@@ -9,25 +14,15 @@ const ExecuteTriggerTests: React.FC = () => {
         fetchTestResults();
     }, []);
 
-    const getClient = () => {
-        return new CosmosClient({
-            endpoint: process.env.REACT_APP_COSMOS_DB_ENDPOINT!,
-            key: process.env.REACT_APP_COSMOS_DB_KEY!
-        });
-    };
-
-    const getContainer = () => {
-        const client = getClient();
-        const database = client.database(process.env.REACT_APP_COSMOS_DB_DATABASE_NAME!);
-        return database.container(process.env.REACT_APP_COSMOS_DB_CONTAINER_NAME!);
-    };
-
     const fetchTestResults = async () => {
         setLoading(true);
         try {
-            const container = getContainer();
-            const { resources } = await container.items.readAll().fetchAll();
-            setTestResults(resources);
+            const keys = await redis.keys('*');
+            const results = await Promise.all(keys.map(async key => {
+                const item = await redis.get(key);
+                return JSON.parse(item!);
+            }));
+            setTestResults(results);
         } catch (error) {
             console.error('Error fetching test results:', error);
         } finally {

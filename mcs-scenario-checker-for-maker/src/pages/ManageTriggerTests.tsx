@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { CosmosClient } from '@azure/cosmos';
+import Redis from 'ioredis';
+
+const redis = new Redis({
+  host: 'localhost',
+  port: 6379,
+});
+
+const CACHE_EXPIRY = 10 * 24 * 60 * 60; // 10 days in seconds
 
 const ManageTriggerTests: React.FC = () => {
     const [jsonInput, setJsonInput] = useState<string>('');
@@ -26,30 +33,16 @@ const ManageTriggerTests: React.FC = () => {
         }
     };
 
-    const getClient = () => {
-        return new CosmosClient({
-            endpoint: process.env.REACT_APP_COSMOS_DB_ENDPOINT!,
-            key: process.env.REACT_APP_COSMOS_DB_KEY!
-        });
-    };
-
-    const getContainer = () => {
-        const client = getClient();
-        const database = client.database(process.env.REACT_APP_COSMOS_DB_DATABASE_NAME!);
-        return database.container(process.env.REACT_APP_COSMOS_DB_CONTAINER_NAME!);
-    };
-
     const handleSubmit = async () => {
         if (validateJson(jsonInput)) {
             try {
-                const container = getContainer();
-                const { resource: createdItem } = await container.items.create(JSON.parse(jsonInput));
-                console.log('Created item:', createdItem);
+                const item = JSON.parse(jsonInput);
+                await redis.set(item.id, JSON.stringify(item), 'EX', CACHE_EXPIRY);
+                console.log('Created item:', item);
                 setError('');
                 setSuccess('JSON submitted successfully');
                 fetchItems();
             } catch (error) {
-                let errorMessage = (error as any).message;
                 console.error('Error submitting JSON:', error);
                 setError('Error submitting JSON');
             }
@@ -60,9 +53,12 @@ const ManageTriggerTests: React.FC = () => {
 
     const fetchItems = async () => {
         try {
-            const container = getContainer();
-            const { resources } = await container.items.readAll().fetchAll();
-            setItems(resources);
+            const keys = await redis.keys('*');
+            const items = await Promise.all(keys.map(async key => {
+                const item = await redis.get(key);
+                return JSON.parse(item!);
+            }));
+            setItems(items);
         } catch (error) {
             console.error('Error fetching items:', error);
             setError('Error fetching items');
@@ -72,14 +68,13 @@ const ManageTriggerTests: React.FC = () => {
     const handleUpdate = async () => {
         if (validateJson(jsonInput) && itemId) {
             try {
-                const container = getContainer();
-                const { resource: updatedItem } = await container.item(itemId).replace(JSON.parse(jsonInput));
-                console.log('Updated item:', updatedItem);
+                const item = JSON.parse(jsonInput);
+                await redis.set(itemId, JSON.stringify(item), 'EX', CACHE_EXPIRY);
+                console.log('Updated item:', item);
                 setError('');
                 setSuccess('JSON updated successfully');
                 fetchItems();
             } catch (error) {
-                let errorMessage = (error as any).message;
                 console.error('Error updating JSON:', error);
                 setError('Error updating JSON');
             }
@@ -90,14 +85,12 @@ const ManageTriggerTests: React.FC = () => {
 
     const handleDelete = async (id: string) => {
         try {
-            const container = getContainer();
-            await container.item(id).delete();
+            await redis.del(id);
             console.log('Deleted item with ID:', id);
             setError('');
             setSuccess('Item deleted successfully');
             fetchItems();
         } catch (error) {
-            let errorMessage = (error as any).message;
             console.error('Error deleting item:', error);
             setError('Error deleting item');
         }
