@@ -3,8 +3,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import LeftNav from './components/LeftNav';
-import AddTest from './pages/AddTest';
-import ExecuteTests from './pages/ExecuteTests';
+import ManageTriggerTests from './pages/ManageTriggerTests';
+import ExecuteTriggerTests from './pages/ExecuteTriggerTests';
 import './styles/App.css';
 
 const App: React.FC = () => {
@@ -16,8 +16,8 @@ const App: React.FC = () => {
           <LeftNav />
           <div className="content">
             <Routes>
-              <Route path="/add-test" element={<AddTest />} />
-              <Route path="/execute-tests" element={<ExecuteTests />} />
+              <Route path="/manage-trigger-tests" element={<ManageTriggerTests />} />
+              <Route path="/execute-trigger-tests" element={<ExecuteTriggerTests />} />
             </Routes>
           </div>
         </div>
